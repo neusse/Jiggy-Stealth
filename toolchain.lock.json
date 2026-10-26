@@ -1,0 +1,25 @@
+{
+  "core": "rp2040:rp2040@4.5.3",
+  "boardIndex": "https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json",
+  "fqbn": "rp2040:rp2040:adafruit_feather_usb_host:freq=120,usbstack=tinyusb,opt=Small,flash=8388608_0",
+  "libraries": [
+    {
+      "name": "Adafruit TinyUSB Library",
+      "version": "3.7.3",
+      "url": "https://downloads.arduino.cc/libraries/github.com/adafruit/Adafruit_TinyUSB_Library-3.7.3.zip",
+      "sha256": "62f8dd01d6fbd025c570c90e970695788a824c1a3f787e987f8a7820b0f3cb5f"
+    },
+    {
+      "name": "Pico PIO USB",
+      "version": "0.7.3",
+      "url": "https://downloads.arduino.cc/libraries/github.com/sekigon-gonnoc/Pico_PIO_USB-0.7.3.zip",
+      "sha256": "78961733e2e15342820f0cda9233fd3cabd7ae9f595fe2aeedfaa9bf144365e9"
+    },
+    {
+      "name": "Adafruit NeoPixel",
+      "version": "1.15.2",
+      "url": "https://downloads.arduino.cc/libraries/github.com/adafruit/Adafruit_NeoPixel-1.15.2.zip",
+      "sha256": "0ace1255f48d76f7fc2a40483387aa014686e3e60274bef496b0e967fe89965d"
+    }
+  ]
+}

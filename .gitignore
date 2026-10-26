@@ -1,0 +1,11 @@
+.deps/
+.local/
+build/
+dist/*.elf
+dist/*.bin
+__pycache__/
+.vs/
+*.log
+.env
+.env.*
+!.env.example
