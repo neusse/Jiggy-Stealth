@@ -30,6 +30,10 @@ After 30–60 seconds without mouse activity, Movement adds a tiny excursion and
 
 USB identity forwarding copies IDs and name strings. The bridge exposes its own composite HID/diagnostic layout; see [USB identity and compatibility](docs/USER_GUIDE.md#usb-identity-and-receiver-support) for the supported behavior.
 
+## Optional 3D-printed case
+
+Adafruit's [Case for Feather RP2040 USB Host](https://learn.adafruit.com/case-for-feather-rp2040-usb-host), designed by the Ruiz Brothers, fits the same board used by Jiggy-Stealth. It snaps together without screws, leaves both USB ports accessible, and includes actuators for **Boot** and **Reset**, so you can toggle jiggle without opening the case. The [CAD files page](https://learn.adafruit.com/case-for-feather-rp2040-usb-host/cad-files) provides printable STLs and editable STEP/Fusion 360 files; the guide also covers assembly.
+
 ## Documentation
 
 Start with the **[documentation index](docs/README.md)** for controls, LEDs, setup, USB identity, diagnostics, configuration, and verification.
