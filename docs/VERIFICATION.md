@@ -34,7 +34,7 @@ pwsh -File .\scripts\test.ps1
 
 Both images were flashed to the reference board. Diagnostics reported version **1.3.0**, build **diagnostics**, CDC enabled, complete Logitech identity forwarding, **Movement selected**, **jiggle off**, no held Shift, and zero decode errors, queue overflows, or host faults. Windows then enumerated Production as a healthy **HID-compliant mouse**, **HID Keyboard Device**, and **USB Input Device** using `046D:C52B`, revision `1211`, and the `HidUsb` service. The device had no present serial/COM child; the other computer serial ports were unrelated Bluetooth ports. Production's compatible IDs reported USB class `03` (HID).
 
-The v1.3.0 profile change retains the parser and activity logic from the earlier hardware session below. Physical input and manual recovery observations are recorded separately as they are completed.
+The v1.3.0 profile change retains the parser and activity logic from the earlier hardware session below. A fresh physical movement/click/scroll session and a manually triggered Boot/Reset UF2 recovery have not yet been recorded for v1.3.0. The documented ROM recovery path is independent of application serial.
 
 ### Earlier forwarding and jiggle checks
 
