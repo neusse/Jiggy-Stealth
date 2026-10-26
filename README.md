@@ -11,6 +11,7 @@
   <a href="firmware/JiggyStealth/Config.h"><img alt="Firmware 1.2.0" src="https://img.shields.io/badge/Firmware-1.2.0-8fb9ee?style=flat-square&amp;labelColor=122630"></a>
   <a href="docs/VERIFICATION.md"><img alt="26,471 native checks passed" src="https://img.shields.io/badge/Checks-26%2C471_passed-a8db78?style=flat-square&amp;labelColor=122630"></a>
   <img alt="Jiggle off at startup" src="https://img.shields.io/badge/Startup-Jiggle_OFF-36cbb8?style=flat-square&amp;labelColor=122630">
+  <a href="LICENSE"><img alt="License: PolyForm Noncommercial 1.0.0" src="https://img.shields.io/badge/License-PolyForm_NC_1.0.0-e6b868?style=flat-square&amp;labelColor=122630"></a>
 </p>
 
 Jiggy-Stealth turns an [Adafruit Feather RP2040 USB Host](https://www.adafruit.com/product/5723) into a USB mouse bridge with optional idle movement or brief Shift presses. It forwards the attached device's USB identity and gives real mouse input priority. Tested with a Logitech M305 and its USB receiver.
@@ -43,4 +44,8 @@ pwsh -File .\scripts\test.ps1
 pwsh -File .\scripts\build.ps1
 ```
 
-Dependency sources and licenses are listed in [third-party notices](THIRD_PARTY_NOTICES.md).
+## License
+
+Personal and noncommercial use, modification, and sharing are permitted under the [PolyForm Noncommercial License 1.0.0](LICENSE). Commercial use, including commercial derivatives, requires a separate written commercial license from the repository owner, subject to the full license's permissions. See [licensing details](LICENSING.md) and [NOTICE](NOTICE).
+
+Dependency sources and their independent licenses are listed in [third-party notices](THIRD_PARTY_NOTICES.md).

@@ -2,6 +2,8 @@
 
 Jiggy-Stealth uses the components below. Their original licenses and copyright notices continue to apply to those components. The complete pinned library source archives are listed in [toolchain.lock.json](toolchain.lock.json) and fetched by [setup.ps1](scripts/setup.ps1).
 
+The [PolyForm Noncommercial project license](LICENSE) applies to original Jiggy-Stealth work. Third-party components are governed independently by the licenses below; the project's commercial-use restrictions do not replace them. [LICENSING.md](LICENSING.md#scope-and-third-party-rights) preserves the applicable LGPL modification, relinking, and debugging rights for combined firmware.
+
 | Component | Version | License text | Source |
 | --- | --- | --- | --- |
 | Arduino-Pico RP2040 core | 4.5.3 | [LGPL 2.1](docs/licenses/arduino-pico.txt) | [earlephilhower/arduino-pico](https://github.com/earlephilhower/arduino-pico/tree/4.5.3) |

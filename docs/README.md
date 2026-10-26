@@ -9,6 +9,7 @@ Jiggy-Stealth bridges a USB mouse or wireless receiver through the Adafruit Feat
 | [Implementation plan](../IMPLEMENTATION_PLAN.md) | Hardware architecture and the original implementation stages |
 | [Firmware research](FIRMWARE_RESEARCH.md) | Primary sources, USB host/device constraints, and receiver report formats |
 | [Third-party notices](../THIRD_PARTY_NOTICES.md) | Pinned dependency sources and their license texts |
+| [Licensing](../LICENSING.md) | Personal/noncommercial permissions, commercial license inquiries, and third-party rights |
 
 ## Useful entry points
 

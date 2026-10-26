@@ -22,7 +22,9 @@ pwsh -File .\scripts\test.ps1
 
 ## Observed hardware results
 
-The working behavior was verified on firmware **1.1.1**, before the Jiggy-Stealth branding update. The **1.2.0** source uses the new project name, sketch paths, namespace, and fallback USB product string; mouse forwarding and activity behavior are retained. Rebuild and native checks validate the renamed project. The reference board does not need to be reflashed merely to publish this repository.
+The working behavior was verified on firmware **1.1.1**, before the Jiggy-Stealth branding update. The **1.2.0** source uses the new project name, sketch paths, namespace, and fallback USB product string; mouse forwarding and activity behavior are retained. Rebuild and native checks validate the renamed project.
+
+On October 25, 2026, the published **1.2.0** UF2 was flashed to the reference board through COM6. The upload image matched the published UF2 and its SHA-256 checksum. Post-flash diagnostics confirmed version 1.2.0, **Movement selected**, **jiggle disabled**, no held Shift, complete Logitech identity forwarding, and zero decoding errors, queue overflows, or host faults. Activity was left off for the next physical Boot press.
 
 | Check | Observation |
 | --- | --- |
