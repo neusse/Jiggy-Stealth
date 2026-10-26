@@ -1,4 +1,4 @@
-"""Read Jiggy-Stealth diagnostics from the board; this cannot enable activity."""
+"""Read Jiggy-Stealth-Diagnostics firmware; production has no serial port. This cannot enable activity."""
 import argparse
 import json
 from pathlib import Path
@@ -27,7 +27,7 @@ def main():
                    if (p.vid == 0x239A and p.pid in (0x8129, 0xC129, 0xCAFE))
                    or (p.vid == 0x046D and p.pid == 0xC52B)]
         if len(matches) != 1:
-            parser.error("Specify --port COMx; could not identify exactly one Feather USB Host")
+            parser.error("Specify --port COMx; could not identify exactly one Feather USB Host. Production has no COM port; install Jiggy-Stealth-Diagnostics.uf2 for capture.")
         port = matches[0]
     data = bytearray()
     with serial.Serial(port, 115200, timeout=0.1, write_timeout=1) as connection:

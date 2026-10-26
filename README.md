@@ -8,8 +8,8 @@
 
 <p align="center">
   <a href="docs/USER_GUIDE.md"><img alt="Hardware: RP2040 USB Host" src="https://img.shields.io/badge/RP2040-USB_Host-36cbb8?style=flat-square&amp;labelColor=122630"></a>
-  <a href="firmware/JiggyStealth/Config.h"><img alt="Firmware 1.2.0" src="https://img.shields.io/badge/Firmware-1.2.0-8fb9ee?style=flat-square&amp;labelColor=122630"></a>
-  <a href="docs/VERIFICATION.md"><img alt="26,471 native checks passed" src="https://img.shields.io/badge/Checks-26%2C471_passed-a8db78?style=flat-square&amp;labelColor=122630"></a>
+  <a href="firmware/JiggyStealth/Config.h"><img alt="Firmware 1.3.0" src="https://img.shields.io/badge/Firmware-1.3.0-8fb9ee?style=flat-square&amp;labelColor=122630"></a>
+  <a href="docs/VERIFICATION.md"><img alt="26,500 native checks passed per build" src="https://img.shields.io/badge/Checks-26%2C500_per_build-a8db78?style=flat-square&amp;labelColor=122630"></a>
   <img alt="Jiggle off at startup" src="https://img.shields.io/badge/Startup-Jiggle_OFF-36cbb8?style=flat-square&amp;labelColor=122630">
   <a href="LICENSE"><img alt="License: PolyForm Noncommercial 1.0.0" src="https://img.shields.io/badge/License-PolyForm_NC_1.0.0-e6b868?style=flat-square&amp;labelColor=122630"></a>
 </p>
@@ -18,7 +18,14 @@ Jiggy-Stealth turns an [Adafruit Feather RP2040 USB Host](https://www.adafruit.c
 
 **Movement is the default mode. Jiggle starts OFF after every restart.**
 
-**[Download the latest release](https://github.com/neusse/Jiggy-Stealth/releases/latest)** — [ready-to-flash UF2](https://github.com/neusse/Jiggy-Stealth/releases/latest/download/Jiggy-Stealth.uf2), complete source/build ZIP, quick flashing guide, and SHA-256 checksums. Installing the UF2 needs no compiler or development tools.
+**[Download the latest release](https://github.com/neusse/Jiggy-Stealth/releases/latest)** — two ready-to-flash builds, complete source/build ZIP, quick flashing guide, and SHA-256 checksums. Installing a UF2 needs no compiler or development tools.
+
+| Build | Download | USB interfaces |
+| --- | --- | --- |
+| **Production** — everyday use | [Jiggy-Stealth.uf2](https://github.com/neusse/Jiggy-Stealth/releases/latest/download/Jiggy-Stealth.uf2) | Mouse + keyboard HID; **no serial/COM port**, including at startup |
+| **Diagnostics** — troubleshooting | [Jiggy-Stealth-Diagnostics.uf2](https://github.com/neusse/Jiggy-Stealth/releases/latest/download/Jiggy-Stealth-Diagnostics.uf2) | The same full bridge plus USB serial for status and packet capture |
+
+Both builds have the same mouse forwarding, identity forwarding, and Movement/Shift features. **UF2 updates need no serial connection:** hold Boot, press/release Reset, and copy either UF2 to `RPI-RP2`. Flash one build at a time; see [flashing and recovery](docs/USER_GUIDE.md#flashing-and-recovery).
 
 ## Get started
 
@@ -28,7 +35,7 @@ Jiggy-Stealth turns an [Adafruit Feather RP2040 USB Host](https://www.adafruit.c
 
 After 30–60 seconds without mouse activity, Movement adds a tiny excursion and return. Hold Boot for two seconds to select Movement or Shift; the selected mode stays off until a short press. Pair wireless receivers directly on the computer before using the bridge.
 
-USB identity forwarding copies IDs and name strings. The bridge exposes its own composite HID/diagnostic layout; see [USB identity and compatibility](docs/USER_GUIDE.md#usb-identity-and-receiver-support) for the supported behavior.
+USB identity forwarding copies IDs and name strings. The bridge exposes its own mouse/keyboard HID layout, with serial added only by Diagnostics; see [USB identity and compatibility](docs/USER_GUIDE.md#usb-identity-and-receiver-support) for the supported behavior.
 
 ## Optional 3D-printed case
 

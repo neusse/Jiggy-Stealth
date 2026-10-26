@@ -9,6 +9,7 @@
 #include "BridgeLogic.h"
 #include "HidDescriptors.h"
 #include "UsbIdentity.h"
+#include "UsbDevice.h"
 
 #if !defined(ARDUINO_ADAFRUIT_FEATHER_RP2040_USB_HOST)
 #error Select Adafruit Feather RP2040 USB Host, not a generic Pico or Feather.
@@ -23,9 +24,13 @@ bool core1_separate_stack = true;
 Adafruit_USBH_Host USBHost;
 Adafruit_USBD_HID hid(HidDescriptor, sizeof(HidDescriptor), HID_ITF_PROTOCOL_NONE, 1, false);
 Adafruit_NeoPixel pixel(1, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
-queue_t mouseQueue, rawQueue;
+queue_t mouseQueue;
 critical_section_t sharedLock;
-volatile bool coreReady = false, rawEnabled = false;
+volatile bool coreReady = false;
+#if JIGGY_DIAGNOSTICS
+queue_t rawQueue;
+volatile bool rawEnabled = false;
+#endif
 
 struct InterfaceInfo {
   uint16_t vid = 0, pid = 0, length = 0;
@@ -47,10 +52,12 @@ struct SharedState {
   bool ready = false, hostFault = false;
   uint32_t identityRevision = 0;
 };
+#if JIGGY_DIAGNOSTICS
 struct RawPacket {
   uint8_t address = 0, instance = 0, length = 0;
   uint8_t bytes[64] = {};
 };
+#endif
 HostSlot hostSlots[config::InterfaceCapacity];  // Core 1 only.
 InterfaceInfo interfaceInfo[config::InterfaceCapacity];  // sharedLock protects these.
 SharedState shared;
@@ -75,15 +82,16 @@ volatile uint16_t lastButtonsSent = 0;
 volatile uint8_t keyboardModifier = 0;
 bool wasUsbActive = false, neutralKeyboard = true, syncMouse = true, pixelReady = false;
 uint32_t lastColor = 0xffffffffu;
-char diagnostic[8192];
-size_t diagnosticLength = 0, diagnosticPosition = 0;
-
 SharedState hostSnapshot() {
   critical_section_enter_blocking(&sharedLock);
   SharedState state = shared;
   critical_section_exit(&sharedLock);
   return state;
 }
+
+#if JIGGY_DIAGNOSTICS
+char diagnostic[8192];
+size_t diagnosticLength = 0, diagnosticPosition = 0;
 
 void appendDiagnostic(const char* format, ...) {
   if (diagnosticLength >= sizeof(diagnostic) - 1) return;
@@ -99,8 +107,8 @@ void startDiagnostic() { diagnosticLength = diagnosticPosition = 0; }
 void statusDiagnostic() {
   SharedState s = hostSnapshot();
   startDiagnostic();
-  appendDiagnostic("{\"version\":\"%s\",\"enabled\":%s,\"mode\":\"%s\",\"usb_active\":%s,\"host_ready\":%s,\"interfaces\":%u,\"mouse_interfaces\":%u,\"buttons\":%u,\"reports\":%lu,\"events\":%lu,\"forwarded\":%lu,\"overflows\":%lu,\"decode_errors\":%lu,\"movements\":%lu,\"shift_presses\":%lu,\"shift_releases\":%lu,\"shift_down\":%s,\"host_fault\":%s,\"raw_drops\":%lu",
-    config::Version, activity.enabled() ? "true" : "false", activity.mode() == Mode::Movement ? "movement" : "shift",
+  appendDiagnostic("{\"version\":\"%s\",\"build\":\"%s\",\"cdc_enabled\":true,\"enabled\":%s,\"mode\":\"%s\",\"usb_active\":%s,\"host_ready\":%s,\"interfaces\":%u,\"mouse_interfaces\":%u,\"buttons\":%u,\"reports\":%lu,\"events\":%lu,\"forwarded\":%lu,\"overflows\":%lu,\"decode_errors\":%lu,\"movements\":%lu,\"shift_presses\":%lu,\"shift_releases\":%lu,\"shift_down\":%s,\"host_fault\":%s,\"raw_drops\":%lu",
+    config::Version, config::BuildProfile, activity.enabled() ? "true" : "false", activity.mode() == Mode::Movement ? "movement" : "shift",
     wasUsbActive ? "true" : "false", s.ready ? "true" : "false", s.connected, s.supported, s.buttons,
     static_cast<unsigned long>(s.reports), static_cast<unsigned long>(s.events), static_cast<unsigned long>(physicalSent),
     static_cast<unsigned long>(s.overflows), static_cast<unsigned long>(s.decodeErrors), static_cast<unsigned long>(movementsSent),
@@ -157,6 +165,7 @@ void diagnosticsLoop() {
     }
   }
 }
+#endif
 
 uint16_t getReport(uint8_t id, hid_report_type_t type, uint8_t* buffer, uint16_t requested) {
   if (type != HID_REPORT_TYPE_INPUT) return 0;
@@ -173,18 +182,13 @@ uint16_t getReport(uint8_t id, hid_report_type_t type, uint8_t* buffer, uint16_t
 void setReport(uint8_t, hid_report_type_t, const uint8_t*, uint16_t) {}
 
 void setup() {
-  TinyUSBDevice.detach();
-  // Reset the automatically added CDC configuration, then put HID at MI_00.
-  // CDC's IAD groups MI_01/02, avoiding the donor's vendor driver at MI_02.
-  Serial.end();
   hid.setReportCallback(getReport, setReport);
-  hid.begin();
-  TinyUSBDevice.setProductDescriptor(config::ProjectName);
-  Serial.begin(115200);
-  TinyUSBDevice.setConfigurationMaxPower(250);
+  configureUsbDevice(hid);
   critical_section_init(&sharedLock);
   queue_init(&mouseQueue, sizeof(MouseEvent), config::QueueCapacity);
+#if JIGGY_DIAGNOSTICS
   queue_init(&rawQueue, sizeof(RawPacket), 16);
+#endif
   pinMode(PIN_BUTTON, INPUT_PULLUP);
   pinMode(NEOPIXEL_POWER, OUTPUT);
   digitalWrite(NEOPIXEL_POWER, HIGH);
@@ -226,7 +230,7 @@ void identityDeviceLoop(const SharedState& state, uint32_t now) {
     seenIdentityRevision = shared.identityRevision;
     critical_section_exit(&sharedLock);
     if (!identityAttached || !identity.same(visibleIdentity())) {
-      TinyUSBDevice.detach();
+      disconnectUsbDevice();
       pendingIdentity = identity;
       identityChanging = true;
       identitySwitchAt = now + 100; // Let the computer observe a real disconnect.
@@ -235,13 +239,13 @@ void identityDeviceLoop(const SharedState& state, uint32_t now) {
   }
   if (identityChanging && static_cast<int32_t>(now - identitySwitchAt) >= 0) {
     setVisibleIdentity(pendingIdentity);
-    TinyUSBDevice.attach();
+    connectUsbDevice();
     identityAttached = true;
     identityChanging = false;
   } else if (!identityAttached && !identityChanging && now - startupAt >= 2000) {
-    // With no donor, retain a programming/diagnostic connection.
+    // With no donor, expose fallback HID (plus CDC only in diagnostics).
     setVisibleIdentity(UsbIdentity{});
-    TinyUSBDevice.attach();
+    connectUsbDevice();
     identityAttached = true;
   }
 }
@@ -337,7 +341,9 @@ void loop() {
     lastColor = color;
   }
   digitalWrite(LED_BUILTIN, fault ? HIGH : LOW);
+#if JIGGY_DIAGNOSTICS
   diagnosticsLoop();
+#endif
 }
 
 void setup1() {
@@ -501,6 +507,7 @@ extern "C" void tuh_hid_report_received_cb(uint8_t address, uint8_t instance, co
   MouseInput input;
   DecodeResult result = slot->parser.decode(bytes, length, input);
   uint32_t now = millis();
+#if JIGGY_DIAGNOSTICS
   if (__atomic_load_n(&rawEnabled, __ATOMIC_ACQUIRE)) {
     RawPacket packet;
     packet.address = address;
@@ -513,6 +520,7 @@ extern "C" void tuh_hid_report_received_cb(uint8_t address, uint8_t instance, co
       critical_section_exit(&sharedLock);
     }
   }
+#endif
   critical_section_enter_blocking(&sharedLock);
   ++shared.reports;
   if (result == DecodeResult::Malformed) ++shared.decodeErrors;

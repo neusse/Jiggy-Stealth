@@ -11,6 +11,7 @@ Jiggy-Stealth bridges a USB mouse or wireless receiver through the Adafruit Feat
 | [Third-party notices](../THIRD_PARTY_NOTICES.md) | Pinned dependency sources and their license texts |
 | [Licensing](../LICENSING.md) | Personal/noncommercial permissions, commercial license inquiries, and third-party rights |
 | [v1.2.0 release](releases/v1.2.0.md) | Download contents, installation steps, and release notes |
+| [v1.3.0 release](releases/v1.3.0.md) | Production without serial, full Diagnostics build, and UF2 recovery |
 
 ## Useful entry points
 

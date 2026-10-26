@@ -1,6 +1,7 @@
 #include <Adafruit_TinyUSB.h>
 #include <hardware/sync.h>
 #include "UsbIdentity.h"
+#include "Config.h"
 
 #ifndef USB_IDENTITY_WRAPPING
 #error Build with scripts/build.ps1 so the USB identity descriptor wrappers are linked.
@@ -26,11 +27,11 @@ const uint16_t* __real_tud_descriptor_string_cb(uint8_t index, uint16_t language
 const uint8_t* __wrap_tud_descriptor_device_cb(void) {
   static tusb_desc_device_t descriptor;
   descriptor = *reinterpret_cast<const tusb_desc_device_t*>(__real_tud_descriptor_device_cb());
-  // HID comes first, followed by a CDC IAD, so Windows does not bind Logitech's
-  // vendor-interface MI_02 driver to the bridge's mouse interface.
-  descriptor.bDeviceClass = TUSB_CLASS_MISC;
-  descriptor.bDeviceSubClass = MISC_SUBCLASS_COMMON;
-  descriptor.bDeviceProtocol = MISC_PROTOCOL_IAD;
+  // Production declares classes per interface. Diagnostics additionally uses
+  // an IAD to group CDC at MI_01/02; HID remains MI_00 in either profile.
+  descriptor.bDeviceClass = config::DiagnosticSerial ? TUSB_CLASS_MISC : 0;
+  descriptor.bDeviceSubClass = config::DiagnosticSerial ? MISC_SUBCLASS_COMMON : 0;
+  descriptor.bDeviceProtocol = config::DiagnosticSerial ? MISC_PROTOCOL_IAD : 0;
   if (currentIdentity.valid) {
     descriptor.idVendor = currentIdentity.vid;
     descriptor.idProduct = currentIdentity.pid;

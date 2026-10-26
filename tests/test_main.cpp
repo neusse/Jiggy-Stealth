@@ -221,11 +221,14 @@ void identityBehavior() {
   std::puts("PASS donor identity: VID/PID matching, raw Unicode strings, absent serial and malformed/max-length descriptors");
 }
 
+unsigned usbDeviceBehavior();
+
 int main() {
   receiverReports();
   outputReports();
   buttonBehavior();
   activityBehavior();
   identityBehavior();
+  checks += usbDeviceBehavior();
   std::printf("All %u checks passed.\n", checks);
 }
