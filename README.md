@@ -18,10 +18,12 @@ Jiggy-Stealth turns an [Adafruit Feather RP2040 USB Host](https://www.adafruit.c
 
 **Movement is the default mode. Jiggle starts OFF after every restart.**
 
+**[Download the latest release](https://github.com/neusse/Jiggy-Stealth/releases/latest)** — [ready-to-flash UF2](https://github.com/neusse/Jiggy-Stealth/releases/latest/download/Jiggy-Stealth.uf2), complete source/build ZIP, quick flashing guide, and SHA-256 checksums. Installing the UF2 needs no compiler or development tools.
+
 ## Get started
 
 1. Connect the Feather's USB-C port to your computer and plug your paired mouse receiver into its USB-A port.
-2. Flash [Jiggy-Stealth.uf2](dist/Jiggy-Stealth.uf2) using the [flashing guide](docs/USER_GUIDE.md#flashing-and-recovery).
+2. Download [Jiggy-Stealth.uf2](https://github.com/neusse/Jiggy-Stealth/releases/latest/download/Jiggy-Stealth.uf2) and follow the [flashing guide](docs/USER_GUIDE.md#flashing-and-recovery).
 3. Short-press **Boot** to enable or disable jiggle. Green means Movement is enabled; dim blue means off.
 
 After 30–60 seconds without mouse activity, Movement adds a tiny excursion and return. Hold Boot for two seconds to select Movement or Shift; the selected mode stays off until a short press. Pair wireless receivers directly on the computer before using the bridge.

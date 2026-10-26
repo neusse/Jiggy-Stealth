@@ -71,6 +71,8 @@ Use the provided build script for source compilation: it supplies the two GNU li
 
 ## Flashing and recovery
 
+For installation without building, download **Jiggy-Stealth.uf2** from the [latest GitHub release](https://github.com/neusse/Jiggy-Stealth/releases/latest). The release also provides a source/build ZIP, `FLASHING.txt`, and `SHA256SUMS.txt`. The ZIP contains the complete tagged project, including the prebuilt firmware, build scripts, documentation, and licenses. Building from source still requires the prerequisites above and downloads the pinned dependencies.
+
 The upload script requests the serial bootloader and uploads the compiled sketch. Close serial monitors before uploading. If automatic upload fails:
 
 1. Hold **Boot**.
@@ -104,3 +106,13 @@ Timing constants and `MovementCounts` are in [Config.h](../firmware/JiggyStealth
 Hardware validation evidence and remaining checks are recorded in [verification results](VERIFICATION.md). The researched design is in [IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md).
 
 Dependencies retain their upstream licenses; see [third-party notices](../THIRD_PARTY_NOTICES.md): [Arduino-Pico](https://github.com/earlephilhower/arduino-pico), [Adafruit TinyUSB](https://github.com/adafruit/Adafruit_TinyUSB_Arduino), [Pico-PIO-USB](https://github.com/sekigon-gonnoc/Pico-PIO-USB), and [Adafruit NeoPixel](https://github.com/adafruit/Adafruit_NeoPixel). Setup fetches the pinned source archives, including their notices and licenses.
+
+## Packaging a release
+
+From a clean Git checkout, build the firmware and commit the source, matching UF2/checksum, and documentation. Package an exact committed ref with:
+
+```powershell
+pwsh -File .\scripts\package.ps1 -Ref HEAD
+```
+
+The script reads the version from that commit and writes release assets to `build/releases/v<version>/`. It creates a source ZIP with one project root folder, extracts the exact committed UF2, adds a quick flashing guide and checksums, and checks required source/license files. It excludes Git history, dependency caches, local captures, and build intermediates. Use the same commit for the Git tag and GitHub release.
