@@ -69,10 +69,13 @@ INSTALL THE UF2 (no compiler or development tools required)
 5. Plug the paired mouse receiver or supported mouse into the USB-A port.
 
 CHOOSE A BUILD
-Jiggy-Stealth.uf2: Production. Mouse + keyboard HID, no USB serial/COM port.
+Jiggy-Stealth.uf2: Production. Mouse HID, no USB serial/COM port.
 Jiggy-Stealth-Diagnostics.uf2: The same full bridge plus diagnostic USB serial.
 Both support all mouse and jiggle features and forward the donor USB identity.
 Production also omits CDC while discovering a receiver or showing fallback HID.
+Movement mode advertises only a mouse. Selecting Shift adds the keyboard;
+selecting Movement removes it, even when jiggle is off. Both mode changes
+briefly disconnect and reconnect USB and pause mouse forwarding.
 
 UF2 updates do not require serial. Repeat the Boot/Reset steps above to switch
 builds or update production. The RPI-RP2 drive is provided by the RP2040 ROM
@@ -83,7 +86,8 @@ Movement is the default mode. Jiggle starts OFF after every restart.
 Short-press Boot to toggle jiggle: green = Movement on, dim blue = off.
 Leave the mouse idle for 30-60 seconds to see a small excursion and return.
 Hold Boot for two seconds to switch Movement/Shift; the selected mode stays
-off until another short press. Amber = Shift enabled.
+off until another short press. Amber = Shift enabled. Selecting Shift exposes
+the keyboard even before activity is enabled; reset restores mouse-only mode.
 Pair wireless receivers directly on the computer before using this bridge.
 
 SOURCE AND BUILD

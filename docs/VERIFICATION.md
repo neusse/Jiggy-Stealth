@@ -4,7 +4,7 @@ Jiggy-Stealth targets the **Adafruit Feather RP2040 USB Host, product 5723**. Th
 
 ## Automated checks
 
-The native suite exercises the same parser, scheduler, button logic, identity helpers, and report format used by the firmware. It passes **26,500 checks for each of Production and Diagnostics**, covering:
+The native suite exercises the same parser, scheduler, button logic, identity helpers, and report format used by the firmware. It passes **26,661 checks for each of Production and Diagnostics**, covering:
 
 - Packed signed 12-bit receiver movement across the valid X/Y range, sixteen button bits, vertical wheel, and horizontal pan.
 - Report-ID filtering, malformed/truncated data, and splitting large output deltas without losing movement or scrolling.
@@ -12,13 +12,14 @@ The native suite exercises the same parser, scheduler, button logic, identity he
 - Idle gating, physical-input priority, cancellation of return movement, pending Shift release, and timer wrap.
 - Exact raw UTF-16 identity strings, Unicode, absent donor serial numbers, identity comparison, and malformed/max-length USB string descriptors.
 - The actual USB startup and identity modules against a native boundary fake: no controller/CDC startup through the core initializer, guarded early USB tasks, HID-first interface selection, correct classes and donor identity at first connection, one-time controller initialization, and identity reconnect/fallback handling in both profiles.
+- Independent inspection of HID items confirms one mouse application/report ID with no keyboard or output reports in Movement, and mouse/keyboard applications with separate report IDs in Shift. Twenty descriptor-mode cycles per profile verify that report pointers and advertised lengths change together without duplicate HID/CDC registration. Reconfiguration while connected is rejected, and keyboard report ID 2 is blocked in Movement. A held Shift release remains pending after changing modes until accepted.
 
-Both **1.3.0** profiles compile successfully for the pinned RP2040 target:
+Both **1.4.0** profiles compile successfully for the pinned RP2040 target:
 
 | Profile | Flash | Static RAM | UF2 |
 | --- | --- | --- | --- |
-| Production | 92,500 bytes | 58,868 bytes | [Jiggy-Stealth.uf2](../dist/Jiggy-Stealth.uf2) |
-| Diagnostics | 94,564 bytes | 67,084 bytes | [Jiggy-Stealth-Diagnostics.uf2](../dist/Jiggy-Stealth-Diagnostics.uf2) |
+| Production | 93,172 bytes | 58,880 bytes | [Jiggy-Stealth.uf2](../dist/Jiggy-Stealth.uf2) |
+| Diagnostics | 95,364 bytes | 67,096 bytes | [Jiggy-Stealth-Diagnostics.uf2](../dist/Jiggy-Stealth-Diagnostics.uf2) |
 
 Matching SHA-256 files are in [dist](../dist/). The native boundary fake checks application USB initialization and descriptor choices, not USB electrical timing or the complete upstream stack. Linked ARM disassembly separately confirms that core startup calls the deferred initializer wrapper in both builds. The Production ELF has no `Adafruit_USBD_CDC::begin` symbol; Diagnostics retains it.
 
@@ -29,6 +30,18 @@ pwsh -File .\scripts\test.ps1
 ```
 
 ## Observed hardware results
+
+### Version 1.4.0 mode-dependent HID
+
+The physical Boot/Reset procedure entered the RPI-RP2 ROM bootloader from the previously installed Production firmware without a COM port, and the new diagnostic UF2 was installed by copying to that drive.
+
+Diagnostics started in Movement with jiggle off, `keyboard_hid=false`, and a healthy mouse/CDC fallback with no keyboard while no receiver was attached. After the M305 receiver was connected and Boot held for two seconds, Windows enumerated healthy mouse and keyboard children under `046D:C52B`; status reported Shift selected, `keyboard_hid=true`, jiggle off, and zero Shift presses.
+
+A second physical long press returned to Movement. Windows removed the keyboard while retaining the healthy mouse and diagnostic serial. Status reported `keyboard_hid=false`, `usb_reconfiguring=false`, and **853 physical events / 853 forwarded packets**, with zero decode errors, overflows, host faults, or synthetic Shift presses. The user performed movement, clicking, and scrolling for this check.
+
+Production was then installed through the diagnostic COM port. Its initial Windows enumeration contained a healthy mouse with **no keyboard and no serial**. A recorded physical long-press cycle showed mouse only, then mouse plus keyboard in Shift, then mouse only again in Movement. The present devices were healthy, and no serial child appeared during the cycle. The board was left in Movement with jiggle off.
+
+The final build also replaces a queued donor identity whenever a new identity revision arrives during a reconnect, covering rapid removal/reinsertion while a mode switch is pending. Both final UF2s were reloaded after that fix. Final diagnostic startup again reported Movement, jiggle off, `keyboard_hid=false`, complete receiver identity, and zero errors before Production was restored. Rapid mixed hotplug/suspend scenarios still need wider hardware coverage.
 
 ### Version 1.3.0 profiles
 
@@ -59,4 +72,4 @@ The native descriptor fixture is in [M305Descriptor.h](../tests/M305Descriptor.h
 
 The automated Shift checks pass, but a physical Shift pulse session has not been recorded. Computer suspend/resume, receiver reconnects, sustained mixed input, and each application-level click/drag/scroll behavior still need wider hardware acceptance. Other mice and receivers are not hardware-qualified by the M305 result.
 
-Identity forwarding copies USB identity fields. Jiggy-Stealth supplies its own mouse/keyboard HID layout, with CDC only in Diagnostics, and does not relay Logitech vendor configuration or pairing protocols. See the [user guide](USER_GUIDE.md#usb-identity-and-receiver-support).
+Identity forwarding copies USB identity fields. Jiggy-Stealth supplies its own HID layout: mouse only in Movement, mouse/keyboard in Shift, with CDC only in Diagnostics. It does not relay Logitech vendor configuration or pairing protocols. See the [user guide](USER_GUIDE.md#usb-identity-and-receiver-support).

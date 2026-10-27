@@ -2,7 +2,7 @@
 
 Firmware for the **Adafruit Feather RP2040 USB Host (product 5723)**. Connect its USB-C port to the computer and the M305's existing receiver to its USB-A port. The board forwards mouse input and can optionally add a small movement or a brief Shift press.
 
-**Every restart selects Movement mode with jiggle OFF.** Normal mouse forwarding runs regardless of the jiggle setting. USB serial is optional for diagnostics; daily use needs no computer application.
+**Every restart selects Movement mode with jiggle OFF and no keyboard HID collection.** Normal mouse forwarding runs regardless of the jiggle setting. USB serial is optional for diagnostics; daily use needs no computer application.
 
 ## Controls
 
@@ -10,10 +10,17 @@ Firmware for the **Adafruit Feather RP2040 USB Host (product 5723)**. Connect it
 | --- | --- |
 | Power on or Reset | Movement selected; jiggle off |
 | Short press of Boot | Toggle jiggle on/off |
-| Hold Boot for two seconds | Select the other mode (Movement/Shift); jiggle off until a short press |
+| Hold Boot for two seconds | Select Movement/Shift and reconnect USB to remove/add the keyboard; jiggle off until a short press |
 | Receiver disconnect or computer USB suspend/reconnect | Jiggle off; selected mode retained until reset |
 
 A long press does not also count as a short press. Holding Boot through startup does not enable jiggle when it is released. Reset is the separate button next to the USB-C connector.
+
+| Selected mode | HID devices advertised to the computer |
+| --- | --- |
+| Movement, enabled or off | **Mouse only**; no keyboard collection, keyboard report ID, or keyboard reports |
+| Shift, enabled or off | Mouse plus keyboard; short-press Boot separately to enable Shift pulses |
+
+Changing modes disconnects USB for at least 300 ms, then the computer enumerates the new layout. Mouse forwarding pauses while the computer reconnects. Diagnostics serial also reconnects, so reopen any capture session and recheck its COM port. Mode switching always stops jiggle; a held Shift gets a bounded key-release opportunity before the old device disconnects. Reset always restores Movement and removes the keyboard.
 
 | RGB LED | Meaning |
 | --- | --- |
@@ -36,11 +43,11 @@ With a receiver or supported USB mouse connected, the computer uses that device'
 
 The firmware reads identity strings asynchronously from the donor in its first advertised USB language. It preserves the raw UTF-16 strings, including Unicode, instead of translating or truncating them through TinyUSB's default ASCII setters. Changing/removing the attached device makes the computer re-enumerate the bridge and turns jiggle off. With no donor, a fallback **Jiggy-Stealth** device appears after a two-second discovery window: HID only in Production, HID plus diagnostic serial in Diagnostics.
 
-Mouse and keyboard HID collections share the donor's VID/PID. Windows typically names the keyboard child **HID Keyboard Device**, under the receiver's USB parent. Both builds expose these collections through one HID interface. **Production has no USB CDC serial interface or COM port.** Diagnostics adds CDC at interface numbers 1/2, after HID at interface 0. These are bridge-defined layouts, rather than byte-for-byte copies of the donor's configuration.
+Both modes expose one HID interface under the donor's VID/PID. Movement's report descriptor contains only the mouse collection; Shift uses mouse plus keyboard collections. Windows typically names the Shift-only keyboard child **HID Keyboard Device**. **Production has no USB CDC serial interface or COM port.** Diagnostics adds CDC at interface numbers 1/2, after HID at interface 0. These are bridge-defined layouts, rather than byte-for-byte copies of the donor's configuration.
 
 USB controller initialization is deferred until the complete interface configuration and initial donor/fallback identity are ready. The core's automatic CDC startup is suppressed, so Production does not briefly expose serial while booting, discovering a receiver, or switching identities. Both builds retain all mouse and optional Shift behavior.
 
-The keyboard interface generates only the optional Shift pulse. Keyboard and vendor-specific reports from the attached receiver are not relayed. Logitech battery displays, custom SetPoint mappings, and pairing/configuration tools are outside this forwarding implementation. Copying the identity fields does not implement those protocols.
+The keyboard collection exists only in Shift mode and generates only the optional Shift pulse. Keyboard and vendor-specific reports from the attached receiver are not relayed; this firmware does not implement keyboard passthrough. HID interface/report descriptors identify mouse and keyboard functions locally, without an internet VID/PID lookup. The Feather cannot discover a keyboard connected directly to the computer or determine the computer's USB acceptance policy. Logitech battery displays, custom SetPoint mappings, and pairing/configuration tools are outside this forwarding implementation. Copying identity fields does not implement those protocols.
 
 **Pair the mouse with its receiver while that receiver is connected directly to the computer.** First confirm ordinary mouse operation there, then move the receiver to the Feather. The bridge does not implement the wireless link or Logitech's pairing protocol.
 
@@ -100,6 +107,8 @@ When Diagnostics is currently running, a serial upload can enter the bootloader 
 The board needs working firmware to forward mouse input. If it stops responding, connect the receiver directly to the computer while recovering the board.
 
 ## Diagnostics
+
+Status includes `keyboard_hid` for the currently configured keyboard collection and `usb_reconfiguring` during a mode/identity reconnect. The selected `mode` may differ from the previous USB layout briefly while that reconnect is pending. In steady Movement mode, `keyboard_hid` is false.
 
 Install **Jiggy-Stealth-Diagnostics.uf2** first. This is the full mouse bridge with identical controls and startup defaults, plus serial; it is not the receiver-only probe. Status identifies it with `"build": "diagnostics"` and `"cdc_enabled": true`. Production intentionally has no diagnostic serial connection.
 

@@ -54,7 +54,7 @@ void receiverReports() {
 
 void outputReports() {
   HidMouseParser parser;
-  CHECK(parser.parse(HidDescriptor, sizeof(HidDescriptor)) && parser.supported());
+  CHECK(parser.parse(HidDescriptor.data(), HidDescriptor.size()) && parser.supported());
   Forwarder forwarder;
   MouseEvent event;
   event.buttons = 0x8001;
@@ -165,6 +165,21 @@ void activityBehavior() {
   // Simulate a busy endpoint through suspend: release stays pending until accepted.
   CHECK(a.next(downAt + 100000, true, true).kind == ActionKind::ShiftUp);
   a.accepted(up, downAt + 100000);
+  CHECK(!a.shiftDown() && !a.enabled());
+  CHECK(a.next(downAt + 200000, true, true).kind == ActionKind::None);
+
+  // Changing the descriptor mode must stop activity without losing a held
+  // Shift's release while the old endpoint is busy or suspended.
+  a.toggle(downAt + 200001);
+  downAt = a.nextAt();
+  down = a.next(downAt, true, true);
+  CHECK(down.kind == ActionKind::ShiftDown);
+  a.accepted(down, downAt);
+  a.changeMode();
+  CHECK(a.mode() == Mode::Movement && !a.enabled() && a.shiftDown());
+  up = a.next(downAt + 1, false, false);
+  CHECK(up.kind == ActionKind::ShiftUp);
+  a.accepted(up, downAt + config::ModeKeyReleaseMs);
   CHECK(!a.shiftDown() && !a.enabled());
   CHECK(a.next(downAt + 200000, true, true).kind == ActionKind::None);
 

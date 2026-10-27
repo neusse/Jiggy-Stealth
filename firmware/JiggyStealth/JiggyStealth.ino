@@ -22,7 +22,7 @@ using namespace jiggy_stealth;
 // Avoid splitting the default 8 KB stack between the two USB stacks.
 bool core1_separate_stack = true;
 Adafruit_USBH_Host USBHost;
-Adafruit_USBD_HID hid(HidDescriptor, sizeof(HidDescriptor), HID_ITF_PROTOCOL_NONE, 1, false);
+Adafruit_USBD_HID hid(MouseHidDescriptor, sizeof(MouseHidDescriptor), HID_ITF_PROTOCOL_NONE, 1, false);
 Adafruit_NeoPixel pixel(1, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 queue_t mouseQueue;
 critical_section_t sharedLock;
@@ -73,6 +73,8 @@ struct IdentityJob {
 IdentityJob identityJob;  // Core 1 owns asynchronous descriptor requests.
 uint32_t seenIdentityRevision = 0, identitySwitchAt = 0, startupAt = 0;
 bool identityAttached = false, identityChanging = false;
+bool deviceConfigured = false, modeDisconnectPending = false;
+uint32_t modeReleaseAt = 0;
 Activity activity;
 Button button;
 Forwarder forwarder;
@@ -80,7 +82,7 @@ uint32_t seenEpoch = 0, seenSequence = 0, seenOverflows = 0;
 uint32_t physicalSent = 0, movementsSent = 0, shiftPresses = 0, shiftReleases = 0;
 volatile uint16_t lastButtonsSent = 0;
 volatile uint8_t keyboardModifier = 0;
-bool wasUsbActive = false, neutralKeyboard = true, syncMouse = true, pixelReady = false;
+bool wasUsbActive = false, neutralKeyboard = false, syncMouse = true, pixelReady = false;
 uint32_t lastColor = 0xffffffffu;
 SharedState hostSnapshot() {
   critical_section_enter_blocking(&sharedLock);
@@ -115,9 +117,10 @@ void statusDiagnostic() {
     static_cast<unsigned long>(shiftPresses), static_cast<unsigned long>(shiftReleases), activity.shiftDown() ? "true" : "false",
     s.hostFault ? "true" : "false", static_cast<unsigned long>(s.rawDrops));
   UsbIdentity identity = visibleIdentity();
-  appendDiagnostic(",\"identity_forwarded\":%s,\"usb_vid\":\"%04x\",\"usb_pid\":\"%04x\",\"identity_incomplete\":%s}\n",
+  appendDiagnostic(",\"identity_forwarded\":%s,\"usb_vid\":\"%04x\",\"usb_pid\":\"%04x\",\"identity_incomplete\":%s,\"keyboard_hid\":%s,\"usb_reconfiguring\":%s}\n",
     identity.valid ? "true" : "false", identity.valid ? identity.vid : 0x239a,
-    identity.valid ? identity.pid : 0xcafe, identity.incomplete ? "true" : "false");
+    identity.valid ? identity.pid : 0xcafe, identity.incomplete ? "true" : "false",
+    keyboardHidEnabled() ? "true" : "false", identityChanging || modeDisconnectPending ? "true" : "false");
 }
 
 void descriptorDiagnostic() {
@@ -168,7 +171,7 @@ void diagnosticsLoop() {
 #endif
 
 uint16_t getReport(uint8_t id, hid_report_type_t type, uint8_t* buffer, uint16_t requested) {
-  if (type != HID_REPORT_TYPE_INPUT) return 0;
+  if (type != HID_REPORT_TYPE_INPUT || !usbReportAllowed(id)) return 0;
   uint8_t bytes[8] = {};
   if (id == config::MouseReportId) {
     bytes[0] = static_cast<uint8_t>(lastButtonsSent);
@@ -183,7 +186,7 @@ void setReport(uint8_t, hid_report_type_t, const uint8_t*, uint16_t) {}
 
 void setup() {
   hid.setReportCallback(getReport, setReport);
-  configureUsbDevice(hid);
+  deviceConfigured = configureUsbDevice(hid);
   critical_section_init(&sharedLock);
   queue_init(&mouseQueue, sizeof(MouseEvent), config::QueueCapacity);
 #if JIGGY_DIAGNOSTICS
@@ -206,7 +209,8 @@ void resynchronize(const SharedState& s) {
   forwarder.clear();
   MouseEvent discarded;
   while (queue_try_remove(&mouseQueue, &discarded)) {}
-  neutralKeyboard = syncMouse = true;
+  neutralKeyboard = keyboardHidEnabled();
+  syncMouse = true;
 }
 
 bool sendMouse(const MouseReport& report) {
@@ -216,9 +220,35 @@ bool sendMouse(const MouseReport& report) {
 }
 
 bool sendKeyboard(uint8_t modifier) {
+  if (!usbReportAllowed(config::KeyboardReportId)) return false;
   uint8_t keys[8] = {modifier, 0, 0, 0, 0, 0, 0, 0};
   if (!hid.sendReport(config::KeyboardReportId, keys, sizeof(keys))) return false;
   keyboardModifier = modifier;
+  return true;
+}
+
+void beginUsbReconnect(const SharedState& state, const UsbIdentity& identity, uint32_t now) {
+  disconnectUsbDevice();
+  pendingIdentity = identity;
+  identityChanging = true;
+  modeDisconnectPending = false;
+  identitySwitchAt = now + config::UsbReconnectMs;
+  resynchronize(state);
+  // A disconnect removes the old keyboard from the host. Clear its local
+  // state as well, including when the old endpoint could not accept key-up.
+  if (activity.shiftDown()) activity.accepted({ActionKind::ShiftUp, 0, 0}, now);
+  keyboardModifier = 0;
+}
+
+bool attachSelectedLayout(const UsbIdentity& identity) {
+  if (!deviceConfigured || activity.mode() != usbHidMode()) {
+    deviceConfigured = configureUsbDevice(hid, activity.mode());
+  }
+  if (!deviceConfigured) return false;
+  setVisibleIdentity(identity);
+  neutralKeyboard = keyboardHidEnabled();
+  syncMouse = true;
+  connectUsbDevice();
   return true;
 }
 
@@ -229,24 +259,32 @@ void identityDeviceLoop(const SharedState& state, uint32_t now) {
     identity = discoveredIdentity;
     seenIdentityRevision = shared.identityRevision;
     critical_section_exit(&sharedLock);
-    if (!identityAttached || !identity.same(visibleIdentity())) {
-      disconnectUsbDevice();
-      pendingIdentity = identity;
-      identityChanging = true;
-      identitySwitchAt = now + 100; // Let the computer observe a real disconnect.
-      resynchronize(state);
+    // A new revision during a reconnect must replace the queued identity,
+    // even if a quickly reinserted donor matches the still-visible old one.
+    if (!identityAttached || identityChanging || !identity.same(visibleIdentity())) {
+      beginUsbReconnect(state, identity, now);
     }
   }
+  if (!identityChanging && identityAttached && activity.mode() != usbHidMode()) {
+    if (!modeDisconnectPending) {
+      modeDisconnectPending = true;
+      modeReleaseAt = now + config::ModeKeyReleaseMs;
+      resynchronize(state);
+    }
+    // outputLoop() gets a bounded opportunity to release an existing Shift
+    // on the OLD descriptor. A suspended/broken host cannot stall the switch.
+    if (activity.shiftDown() && TinyUSBDevice.mounted() && !TinyUSBDevice.suspended() &&
+        static_cast<int32_t>(now - modeReleaseAt) < 0) return;
+    beginUsbReconnect(state, visibleIdentity(), now);
+  }
   if (identityChanging && static_cast<int32_t>(now - identitySwitchAt) >= 0) {
-    setVisibleIdentity(pendingIdentity);
-    connectUsbDevice();
-    identityAttached = true;
-    identityChanging = false;
+    if (attachSelectedLayout(pendingIdentity)) {
+      identityAttached = true;
+      identityChanging = false;
+    }
   } else if (!identityAttached && !identityChanging && now - startupAt >= 2000) {
     // With no donor, expose fallback HID (plus CDC only in diagnostics).
-    setVisibleIdentity(UsbIdentity{});
-    connectUsbDevice();
-    identityAttached = true;
+    identityAttached = attachSelectedLayout(UsbIdentity{});
   }
 }
 
@@ -260,7 +298,7 @@ void outputLoop(const SharedState& s, bool usbActive, uint32_t now) {
   Action action = activity.next(now, !forwarder.active() && queue_is_empty(&mouseQueue), s.supported && !s.hostFault);
   if (!hid.ready()) return;
   // Key-up survives mode changes, busy endpoints, receiver removal and suspend.
-  if (neutralKeyboard || action.kind == ActionKind::ShiftUp) {
+  if (keyboardHidEnabled() && (neutralKeyboard || action.kind == ActionKind::ShiftUp)) {
     bool wasDown = activity.shiftDown();
     if (sendKeyboard(0)) {
       activity.accepted({ActionKind::ShiftUp, 0, 0}, now);
@@ -322,7 +360,7 @@ void loop() {
   if (fault) activity.stop();
   switch (button.update(now, digitalRead(PIN_BUTTON) == LOW)) {
     case ButtonEvent::ShortPress:
-      if (usbActive && s.supported && !fault) activity.toggle(now);
+      if (usbActive && !modeDisconnectPending && s.supported && !fault) activity.toggle(now);
       else activity.stop();
       break;
     case ButtonEvent::LongPress: activity.changeMode(); break;

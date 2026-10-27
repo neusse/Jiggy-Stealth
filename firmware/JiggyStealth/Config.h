@@ -10,7 +10,7 @@
 
 namespace config {
 constexpr const char* ProjectName = "Jiggy-Stealth";
-constexpr const char* Version = "1.3.0";
+constexpr const char* Version = "1.4.0";
 constexpr bool DiagnosticSerial = JIGGY_DIAGNOSTICS != 0;
 constexpr const char* BuildProfile = DiagnosticSerial ? "diagnostics" : "production";
 constexpr int16_t MovementCounts = 3;
@@ -21,6 +21,8 @@ constexpr uint32_t ReturnDelayMs = 100;
 constexpr uint32_t ShiftHoldMs = 30;
 constexpr uint32_t DebounceMs = 25;
 constexpr uint32_t LongPressMs = 2000;
+constexpr uint32_t UsbReconnectMs = 300;
+constexpr uint32_t ModeKeyReleaseMs = 100;
 constexpr uint8_t MouseReportId = 1;
 constexpr uint8_t KeyboardReportId = 2;
 constexpr unsigned QueueCapacity = 128;
