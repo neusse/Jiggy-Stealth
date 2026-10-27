@@ -43,6 +43,15 @@ Production was then installed through the diagnostic COM port. Its initial Windo
 
 The final build also replaces a queued donor identity whenever a new identity revision arrives during a reconnect, covering rapid removal/reinsertion while a mode switch is pending. Both final UF2s were reloaded after that fix. Final diagnostic startup again reported Movement, jiggle off, `keyboard_hid=false`, complete receiver identity, and zero errors before Production was restored. Rapid mixed hotplug/suspend scenarios still need wider hardware coverage.
 
+On October 27, 2026, a further **Production Movement enable/disable test** used passive Windows Raw Input capture and repeated present-device enumeration, with the serial-free Production image running throughout:
+
+- Three matching jiggle pairs arrived from the Feather's `046D:C52B` mouse device: three relative counts outward and three opposite counts back, with return delays of **99.772–101.082 ms**. Cursor excursion and return were observed as well.
+- Two complete observed idle windows ended in jiggles after **40.905 seconds** and **32.368 seconds** without preceding mouse input, consistent with the configured 30–60 second interval.
+- **189 device snapshots over approximately 199 seconds** always showed the same healthy mouse and USB input parent, with **zero keyboard children and zero serial/COM children**. Device instance IDs stayed unchanged through jiggle operation, and no mouse re-enumeration occurred after the observer's initial registration notifications.
+- After the user switched the LED to dim blue, a separate **80-second** observation recorded **zero packets from the Feather's mouse device**, exceeding the maximum normal jiggle interval.
+
+The board was left in Movement with jiggle off. Raw captures, local cursor coordinates, and device-instance details remain in the ignored local verification directory.
+
 ### Version 1.3.0 profiles
 
 Both images were flashed to the reference board. Diagnostics reported version **1.3.0**, build **diagnostics**, CDC enabled, complete Logitech identity forwarding, **Movement selected**, **jiggle off**, no held Shift, and zero decode errors, queue overflows, or host faults. Windows then enumerated Production as a healthy **HID-compliant mouse**, **HID Keyboard Device**, and **USB Input Device** using `046D:C52B`, revision `1211`, and the `HidUsb` service. The device had no present serial/COM child; the other computer serial ports were unrelated Bluetooth ports. Production's compatible IDs reported USB class `03` (HID).
